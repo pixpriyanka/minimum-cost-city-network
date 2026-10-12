@@ -1,0 +1,157 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_V 50
+#define MAX_E 500
+#define NAME_LEN 50
+
+typedef struct {
+    int u, v, cost;
+} Edge;
+
+char city[MAX_V][NAME_LEN];
+int parent[MAX_V], rankArr[MAX_V];
+Edge mst[MAX_V];
+int mstCount = 0;
+
+int find(int x) {
+    if (parent[x] != x)
+        parent[x] = find(parent[x]);
+    return parent[x];
+}
+
+int unite(int u, int v) {
+    int a = find(u);
+    int b = find(v);
+
+    if (a == b)
+        return 0;
+
+    if (rankArr[a] < rankArr[b])
+        parent[a] = b;
+    else if (rankArr[a] > rankArr[b])
+        parent[b] = a;
+    else {
+        parent[b] = a;
+        rankArr[a]++;
+    }
+
+    return 1;
+}
+
+int compare(const void *a, const void *b) {
+    const Edge *x = (const Edge *)a;
+    const Edge *y = (const Edge *)b;
+
+    if (x->cost < y->cost) return -1;
+    if (x->cost > y->cost) return 1;
+    return 0;
+}
+
+int main(void) {
+    Edge edges[MAX_E];
+    int V, E, i;
+    long long totalCost = 0;
+
+    printf("=== Minimum-Cost City Network Planner ===\n");
+
+    printf("Enter number of locations (1-%d): ", MAX_V);
+    if (scanf("%d", &V) != 1 || V < 1 || V > MAX_V) {
+        printf("Invalid number of locations.\n");
+        return 1;
+    }
+
+    for (i = 0; i < V; i++) {
+        printf("Enter location %d name: ", i + 1);
+        if (scanf(" %49[^\n]", city[i]) != 1) {
+            printf("Invalid location name.\n");
+            return 1;
+        }
+    }
+
+    printf("Enter number of links (0-%d): ", MAX_E);
+    if (scanf("%d", &E) != 1 || E < 0 || E > MAX_E) {
+        printf("Invalid number of links.\n");
+        return 1;
+    }
+
+    for (i = 0; i < E; i++) {
+        printf("\nLink %d (from to cost): ", i + 1);
+
+        if (scanf("%d %d %d",
+                  &edges[i].u, &edges[i].v,
+                  &edges[i].cost) != 3) {
+            printf("Invalid link input.\n");
+            return 1;
+        }
+
+        if (edges[i].u < 1 || edges[i].u > V ||
+            edges[i].v < 1 || edges[i].v > V ||
+            edges[i].cost < 0) {
+            printf("Invalid endpoints or cost.\n");
+            return 1;
+        }
+
+        edges[i].u--;
+        edges[i].v--;
+    }
+
+    for (i = 0; i < V; i++) {
+        parent[i] = i;
+        rankArr[i] = 0;
+    }
+
+    qsort(edges, E, sizeof(Edge), compare);
+
+    printf("\n--- Edge Selection Log ---\n");
+
+    for (i = 0; i < E; i++) {
+        int u = edges[i].u;
+        int v = edges[i].v;
+
+        printf("%s -- %s (Cost: %d): ",
+               city[u], city[v], edges[i].cost);
+
+        if (mstCount < V - 1 && unite(u, v)) {
+            mst[mstCount++] = edges[i];
+            totalCost += edges[i].cost;
+            printf("ACCEPTED\n");
+        } else {
+            printf("REJECTED - Cycle / MST complete\n");
+        }
+    }
+
+    printf("\n====================================\n");
+    printf(" MINIMUM SPANNING TREE\n");
+    printf("====================================\n");
+
+    if (mstCount == V - 1) {
+        for (i = 0; i < mstCount; i++) {
+            printf("%s -- %s : Cost = %d\n",
+                   city[mst[i].u],
+                   city[mst[i].v],
+                   mst[i].cost);
+        }
+
+        printf("------------------------------------\n");
+        printf("Total Minimum Cost = %lld\n", totalCost);
+        printf("All locations are connected.\n");
+    } else {
+        printf("A spanning tree is impossible.\n");
+        printf("The network is disconnected.\n");
+        printf("Edges in the minimum spanning forest:\n");
+
+        for (i = 0; i < mstCount; i++) {
+            printf("%s -- %s : Cost = %d\n",
+                   city[mst[i].u],
+                   city[mst[i].v],
+                   mst[i].cost);
+        }
+
+        printf("Forest total cost = %lld\n", totalCost);
+        printf("Components could not be fully connected.\n");
+    }
+
+    return 0;
+}
